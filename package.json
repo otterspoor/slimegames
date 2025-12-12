@@ -1,0 +1,16 @@
+{
+  "name": "slime-sports",
+  "version": "1.0.0",
+  "description": "Slime Sports game with TypeScript",
+  "scripts": {
+    "build": "node scripts/bundle.js",
+    "watch": "node scripts/bundle.js --watch",
+    "dev": "node scripts/bundle.js --watch",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.11",
+    "typescript": "^5.9.3"
+  }
+}
+
