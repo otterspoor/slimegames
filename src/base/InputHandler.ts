@@ -13,6 +13,10 @@ export class InputHandler {
     return !!(sources && sources.size > 0);
   }
 
+  clear(): void {
+    this.activeInputs.clear();
+  }
+
   // Legacy support for TouchInput (defaults to 'touch')
   setKey(code: string, isDown: boolean): void {
     this.set('touch', code, isDown);

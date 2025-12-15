@@ -62,7 +62,6 @@ export class TouchInput {
         background: rgba(255, 255, 255, 0.2);
         border: 3px solid rgba(255, 255, 255, 0.4);
         border-radius: 50%;
-        backdrop-filter: blur(4px);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -109,6 +108,13 @@ export class TouchInput {
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         user-select: none;
+      }
+
+      /* Mobile perf: backdrop-filter is very expensive on many devices */
+      @media (pointer: coarse) {
+        .touch-btn {
+          box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+        }
       }
     `;
     document.head.appendChild(style);

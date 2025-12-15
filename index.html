@@ -51,6 +51,29 @@
       justify-content: center;
       align-items: center;
     }
+    
+    /* In-game Menu button */
+    #menuBtn {
+      position: fixed;
+      top: calc(16px + env(safe-area-inset-top, 0px));
+      left: calc(16px + env(safe-area-inset-left, 0px));
+      z-index: 200;
+      pointer-events: auto;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      color: white;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    }
+    #menuBtn:active { transform: scale(0.97); }
+    @media (pointer: coarse) {
+      #menuBtn { backdrop-filter: none; }
+    }
 
     /* Standard Modal (Game Over) */
     .modal {
@@ -125,6 +148,13 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
+    }
+
+    /* Mobile perf: backdrop-filter can be very expensive on many phones */
+    @media (pointer: coarse) {
+      .menu-card {
+        backdrop-filter: none;
+      }
     }
 
     /* Single Player Toggle */
@@ -211,6 +241,7 @@
 <body>
   <canvas id="gameCanvas"></canvas>
   <div id="ui-layer">
+    <button id="menuBtn" type="button">Menu</button>
     
     <!-- Redesigned Landing Page -->
     <div id="selectionModal">
