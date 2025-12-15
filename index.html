@@ -22,6 +22,15 @@
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       overflow: hidden;
       touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Prevent accidental text selection anywhere (mobile + desktop) */
+    * {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
     }
 
     canvas {
