@@ -1,5 +1,7 @@
 import { CONFIG } from './config.js';
 import { InputHandler } from './InputHandler.js';
+import { TouchInput } from './TouchInput.js';
+import { GamepadInput } from './GamepadInput.js';
 import * as Soccer from '../soccer/index.js';
 import * as Volleyball from '../volleyball/index.js';
 import { SlimeBase } from './SlimeBase.js';
@@ -20,6 +22,8 @@ export class Game implements GameInterface {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private input: InputHandler;
+  private touchInput: TouchInput;
+  private gamepadInput: GamepadInput;
   
   private p1: SlimeBase | null = null;
   private p2: SlimeBase | null = null;
@@ -71,6 +75,8 @@ export class Game implements GameInterface {
     this.ctx = context;
     
     this.input = new InputHandler();
+    this.touchInput = new TouchInput(this.input);
+    this.gamepadInput = new GamepadInput(this.input);
     
     const modalElement = document.getElementById('gameOverModal');
     const selectionModalElement = document.getElementById('selectionModal');
@@ -123,12 +129,14 @@ export class Game implements GameInterface {
 
   selectGame(): void {
     this.running = false;
+    this.touchInput.hide();
     this.modal.style.display = 'none';
-    this.selectionModal.style.display = 'block';
+    this.selectionModal.style.display = 'flex'; // Changed to flex for new layout
   }
 
   startGame(mode: GameMode): void {
     this.gameMode = mode;
+    this.touchInput.show();
     const classes = this.GAME_CLASSES[mode];
     
     this.p1 = new classes.SlimeClass(true);
@@ -158,12 +166,21 @@ export class Game implements GameInterface {
   resize(): void {
     const targetRatio = CONFIG.internalWidth / CONFIG.internalHeight;
     const windowRatio = window.innerWidth / window.innerHeight;
+    
+    // Check if we are in "mobile mode" using the enhanced TouchInput detection
+    const isMobile = TouchInput.isMobile();
+    
+    // Desktop: 90% height max, 95% width max (adds padding)
+    // Mobile: 100% height/width (edge-to-edge)
+    const heightFactor = isMobile ? 1.0 : 0.9;
+    const widthFactor = isMobile ? 1.0 : 0.95;
+
     let finalWidth: number, finalHeight: number;
     if (windowRatio > targetRatio) {
-      finalHeight = window.innerHeight * 0.9;
+      finalHeight = window.innerHeight * heightFactor;
       finalWidth = finalHeight * targetRatio;
     } else {
-      finalWidth = window.innerWidth * 0.95;
+      finalWidth = window.innerWidth * widthFactor;
       finalHeight = finalWidth / targetRatio;
     }
     this.canvas.width = finalWidth;
@@ -203,12 +220,17 @@ export class Game implements GameInterface {
 
   endGame(): void {
     this.running = false;
+    this.touchInput.hide();
     this.winnerText.textContent = this.score1 > this.score2 ? "Player 1 Wins!" : "Player 2 Wins!";
     this.modal.style.display = 'block';
   }
 
   update(): void {
     if (!this.running || !this.p1 || !this.p2 || !this.ball) return;
+    
+    // Poll Gamepad
+    this.gamepadInput.update();
+
     this.p1.update(this.input);
     const p2Input = this.p2AI ? this.p2AI.getInput(this.p2, this.ball, this.p1, this.input) : this.input;
     this.p2.update(p2Input);
