@@ -241,6 +241,60 @@
       box-shadow: 0 2px 0 rgba(0,0,0,0.1);
     }
 
+    /* Desktop-only controls hint (hidden on touch devices) */
+    .controls-hint {
+      background: rgba(0, 0, 0, 0.20);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 0.95rem;
+      line-height: 1.25rem;
+    }
+    .controls-hint-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      letter-spacing: 0.2px;
+      color: rgba(255, 255, 255, 0.96);
+    }
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 6px 0;
+    }
+    .controls-player {
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.95);
+      min-width: 34px;
+    }
+    .controls-keys {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+      color: rgba(255, 255, 255, 0.92);
+      font-weight: 650;
+    }
+    .keycap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 2px 0 rgba(0,0,0,0.18);
+      font-size: 0.9rem;
+    }
+
+    /* Hide hint on mobile/touch (and on most tablets/phones) */
+    @media (pointer: coarse) {
+      .controls-hint { display: none; }
+    }
+
     @media (max-width: 480px) {
       .brand h1 { font-size: 2.5rem; }
       .menu-card { width: 100%; }
@@ -270,6 +324,26 @@
           
           <div id="gameButtonsContainer">
             <!-- Buttons injected by Game.ts -->
+          </div>
+
+          <div class="controls-hint" aria-label="Desktop controls">
+            <div class="controls-hint-title">Controls (Desktop)</div>
+            <div class="controls-row">
+              <div class="controls-player">P1</div>
+              <div class="controls-keys">
+                <span class="keycap">A</span>
+                <span class="keycap">D</span>
+                <span class="keycap">W</span>
+              </div>
+            </div>
+            <div class="controls-row">
+              <div class="controls-player">P2</div>
+              <div class="controls-keys">
+                <span class="keycap">←</span>
+                <span class="keycap">→</span>
+                <span class="keycap">↑</span>
+              </div>
+            </div>
           </div>
         </div>
     </div>

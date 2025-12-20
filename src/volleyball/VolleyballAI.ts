@@ -26,6 +26,15 @@ export class VolleyballAI extends AI.AIBase {
   private wasFrozen = false;
   private servePhaseUntilTick = 0;
 
+  // AI-only anti-juggle state (kept here; not in shared physics/entities)
+  private lastBallX: number | null = null;
+  private lastBallY: number | null = null;
+  private lastBallVx: number | null = null;
+  private lastBallVy: number | null = null;
+  private lastBallSide: 'LEFT' | 'RIGHT' | null = null;
+  private verticalSelfPopCountSinceCross = 0;
+  private mustAttemptAttack = false;
+
   // Motion smoothing to avoid jitter
   private readonly enterMoveThreshold = 20; // px
   private readonly exitMoveThreshold = 12; // px
@@ -54,6 +63,15 @@ export class VolleyballAI extends AI.AIBase {
 
     const ballOnOurSide = ball.x >= netX;
     const ballNearNet = Math.abs(ball.x - netX) <= 55;
+
+    // --- Track net crossings and detect "near-vertical self-pop" events ---
+    const side: 'LEFT' | 'RIGHT' = ball.x < netX ? 'LEFT' : 'RIGHT';
+    if (this.lastBallSide && side !== this.lastBallSide) {
+      // Once the ball crosses the net, reset the anti-juggle constraints.
+      this.verticalSelfPopCountSinceCross = 0;
+      this.mustAttemptAttack = false;
+    }
+    this.lastBallSide = side;
 
     // Detect serve/freeze (volleyball reset behavior)
     const now = Date.now();
@@ -85,6 +103,36 @@ export class VolleyballAI extends AI.AIBase {
       this.touchingSinceTick = null;
     }
     const timeTouchingTicks = this.touchingSinceTick == null ? 0 : (tick - this.touchingSinceTick);
+
+    // Detect a "vertical self-pop" that happened on the prior physics step:
+    // - was falling (vy > 0) and is now moving upward (vy < 0)
+    // - nearly no horizontal velocity
+    // - ball ended up basically centered above us (the classic head-juggle loop)
+    if (
+      this.lastBallVy != null &&
+      this.lastBallVx != null &&
+      this.lastBallX != null &&
+      this.lastBallY != null &&
+      !isFrozen &&
+      ballOnOurSide
+    ) {
+      const vyFlipUp = this.lastBallVy > 0.6 && ball.vy < -2.2;
+      const nearVertical = Math.abs(ball.vx) < 0.55;
+      const centered = Math.abs(ball.x - slime.x) < (this.verticalBounceXThreshold * 1.25);
+      const close = selfDist <= (this.touchDist + 10) && ballHeightAboveGround <= (this.touchMaxBallHeight + 15);
+
+      if (vyFlipUp && nearVertical && centered && close) {
+        this.verticalSelfPopCountSinceCross++;
+        // Allow ONE vertical self-pop; after that we must attempt an attack before another can happen.
+        if (this.verticalSelfPopCountSinceCross >= 1) this.mustAttemptAttack = true;
+      }
+    }
+
+    // Update stored ball state for next tick's detection.
+    this.lastBallX = ball.x;
+    this.lastBallY = ball.y;
+    this.lastBallVx = ball.vx;
+    this.lastBallVy = ball.vy;
 
     // --- Choose a horizontal target ---
     let targetX = slime.x;
@@ -161,14 +209,44 @@ export class VolleyballAI extends AI.AIBase {
     const prefersJumpWithServe = prefersJump || serveBallHittable;
 
     // Rollout-based selection: pick action (+ optional jump) that avoids conceding and prefers scoring.
+    // BUT: if we've already produced a near-vertical self-pop on our side, force a decisive
+    // "attack attempt" so we can't juggle vertically indefinitely.
     const p1Plan = planFromInput(opponentInput, true);
-    const plan = this.pickPlanByRollout(slime, opponent, ball, prefersJumpWithServe, p1Plan);
-    if (plan.jumpOnStep0 && onGround && canStrike) {
-      this.lastStrikeTick = tick;
+
+    let plan: { action: P2Action; jumpOnStep0: boolean };
+    const forcedAttackThisTick = this.mustAttemptAttack && ballOnOurSide && !isFrozen;
+    if (forcedAttackThisTick) {
+      // Step to the right of the ball so the contact is off-center and sends it LEFT.
+      const attackOffset = 62;
+      const attackTargetX = clamp(ball.x + attackOffset, minX, maxX);
+      targetX = attackTargetX;
+
+      const error = attackTargetX - slime.x;
+      const action: P2Action = Math.abs(error) < 8 ? 'NONE' : (error > 0 ? 'RIGHT' : 'LEFT');
+
+      // Jump-hit the next falling, hittable ball to "attempt a point" (send over).
+      const inAttackHeight = ballHeightAboveGround <= 185 && ballHeightAboveGround >= 45;
+      const falling = ball.vy > 0.35;
+      const nearEnoughX = Math.abs(ball.x - slime.x) < 78;
+      const jumpOnStep0 = canStrike && onGround && inAttackHeight && falling && nearEnoughX;
+
+      plan = { action, jumpOnStep0 };
+
+      // Once we actually attempt the attack (jump-hit), clear the constraint.
+      if (jumpOnStep0) {
+        this.lastStrikeTick = tick;
+        this.mustAttemptAttack = false;
+        this.verticalSelfPopCountSinceCross = 0;
+      }
+    } else {
+      plan = this.pickPlanByRollout(slime, opponent, ball, prefersJumpWithServe, p1Plan);
+      if (plan.jumpOnStep0 && onGround && canStrike) {
+        this.lastStrikeTick = tick;
+      }
     }
 
     // If we're about to jump-hit, bias target to step into the ball from the right.
-    if (plan.jumpOnStep0 && ballOnOurSide) {
+    if (plan.jumpOnStep0 && ballOnOurSide && !forcedAttackThisTick) {
       targetX = clamp(ball.x + 30, minX, maxX);
     }
 

@@ -14,13 +14,15 @@ if (!fs.existsSync(distDir)) {
   fs.mkdirSync(distDir, { recursive: true });
 }
 
-// Read HTML template
-const htmlTemplate = fs.readFileSync(htmlTemplatePath, 'utf8');
 const scriptTagRegex = /<script[^>]*src="[^"]*"[^>]*><\/script>/;
 
-if (!htmlTemplate.match(scriptTagRegex)) {
-  console.error('Could not find script tag in index.html');
-  process.exit(1);
+function readHtmlTemplate() {
+  const htmlTemplate = fs.readFileSync(htmlTemplatePath, 'utf8');
+  if (!htmlTemplate.match(scriptTagRegex)) {
+    console.error('Could not find script tag in index.html');
+    process.exit(1);
+  }
+  return htmlTemplate;
 }
 
 // Inline the bundled JS into HTML
@@ -30,6 +32,8 @@ function inlineBundle() {
     return false;
   }
 
+  // In watch mode, we want index.html edits to reflect immediately.
+  const htmlTemplate = readHtmlTemplate();
   const bundledJs = fs.readFileSync(bundlePath, 'utf8');
   const newHtml = htmlTemplate.replace(scriptTagRegex, `<script>${bundledJs}</script>`);
   fs.writeFileSync(outputHtmlPath, newHtml);
